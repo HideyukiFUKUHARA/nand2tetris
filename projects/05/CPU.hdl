@@ -24,6 +24,7 @@
  * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
  * than to the address resulting from executing the current instruction. 
  */
+//
 
 CHIP CPU {
 
@@ -40,4 +41,94 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+
+// instruction[15] : 0=A, 1:C
+// A inst.
+//     [14:0] : address
+// C inst.
+//     [14:13] : rsv
+//     [12]    : a flag
+//     [11:6]  : c code
+//               a=0             a=1
+//              -----------------------
+//               0   1 0 1 0 1 0
+//               1   1 1 1 1 1 1
+//               -1  1 1 1 0 1 0
+//               D   0 0 1 1 0 0
+//               A   1 1 0 0 0 0 M
+//               !D  0 0 1 1 0 1
+//               !A  1 1 0 0 0 1 !M
+//               -D  0 0 1 1 1 1
+//               -A  1 1 0 0 1 1 -M
+//               D+1 0 1 1 1 1 1
+//               A+1 1 1 0 1 1 1 M+1
+//               D-1 0 0 1 1 1 0
+//               A-1 1 1 0 0 1 0 M-1
+//               D+A 0 0 0 0 1 0 D+M
+//               D-A 0 1 0 0 1 1 D-M
+//               A-D 0 0 0 1 1 1 M-D
+//               D&A 0 0 0 0 0 0 D&M
+//               D|A 0 1 0 1 0 1 D|M
+//     [5:3]   : destination ([5]:A, [4]:D, [3]:M)
+//     [2:0]   : Jump
+//               0 0 0 null No jump
+//               0 0 1 JGT If out > 0 jump
+//               0 1 0 JEQ If out = 0 jump
+//               0 1 1 JGE If out >= 0 jump
+//               1 0 0 JLT If out < 0 jump
+//               1 0 1 JNE If out != 0 jump
+//               1 1 0 JLE If out <= 0 jump
+//               1 1 1 JMP Jump
+
+    // alias
+    And(a=instruction[15], b=true, out=instC);
+    And(a=instruction[12], b=true, out=a);
+    Not(in=instC, out=instA);
+
+    // jump decode
+    DMux8Way(in=instC, sel=instruction[0..2],
+        a=iNULL, b=iJGT, c=iJEQ, d=iJGE, e=iJLT, f=iJNE, g=iJLE, h=iJMP);
+
+    Not(in=zr, out=notzr);
+    Not(in=ng, out=notng);
+
+    And(a=iJGT   , b=notzr  , out=enJGT1);
+    And(a=enJGT1 , b=notng  , out=enJGT);
+    And(a=iJEQ   , b=zr     , out=enJEQ);
+    And(a=iJGE   , b=notng  , out=enJGE);
+    And(a=iJLT   , b=ng     , out=enJLT);
+    And(a=iJNE   , b=notzr  , out=enJNE);
+    Or (a=zr     , b=ng     , out=enJLE1);
+    And(a=iJLE   , b=enJLE1 , out=enJLE);
+
+    Or8Way(in[0]=false, in[1]=enJGT, in[2]=enJEQ, in[3]=enJGE,
+           in[4]=enJLT, in[5]=enJNE, in[6]=enJLE, in[7]=iJMP, out=loadPC);
+
+    And(a=instC, b=instruction[3], out=writeM);
+    And(a=instC, b=instruction[4], out=loadD);
+    And(a=instC, b=instruction[5], out=loadA1);
+
+    Or(a=instA, b=loadA1, out=loadA);
+
+    // Address Register
+    Mux16(a=fbM, b=instruction, sel=instA, out=inA);
+    ARegister(in=inA, load=loadA, out=tmpA, out[0..14]=addressM);
+    Mux16(a=tmpA, b=inM, sel=a, out=outAM);
+
+    // Data Register
+    DRegister(in=fbM, load=loadD, out=outD);
+
+    // ALU
+    ALU(x=outD, y=outAM,
+        zx=instruction[11],
+        nx=instruction[10],
+        zy=instruction[9],
+        ny=instruction[8],
+        f=instruction[7],
+        no=instruction[6],
+        out=outM, out=fbM, zr=zr, ng=ng);
+
+    // PC
+    PC(in=tmpA, load=loadPC, inc=true, reset=reset, out[0..14]=pc);
+
 }
