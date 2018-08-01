@@ -13,9 +13,8 @@ while len(files):
     p = parser(filename)
     c = code()
     s = symtbl()
-    usrAddress = 16
+    nextVarAddress = 16
     instAddress = 0
-    dataAddress = 0
     # create symbol-table
     while p.hasMoreCommands():
         p.advance()
@@ -26,14 +25,14 @@ while len(files):
                 s.addEntry(p.symbol(), instAddress)
                 #print p.symbol(), instAddress
         elif p.commandType() == 'A_COMMAND':
-            if re.match(r'[0-9].*', p.symbol()):
-                pass
-            elif s.contains(p.symbol()):
-                pass
-            else:
-                s.addEntry(p.symbol(), usrAddress)
-                #print p.symbol(), usrAddress
-                usrAddress += 1
+            #if re.match(r'[0-9].*', p.symbol()):
+            #    pass
+            #elif s.contains(p.symbol()):
+            #    pass
+            #else:
+            #    s.addEntry(p.symbol(), nextVarAddress)
+            #    #print p.symbol(), nextVarAddress
+            #    nextVarAddress += 1
             instAddress += 1
         else:
             instAddress += 1
@@ -50,7 +49,9 @@ while len(files):
             elif s.contains(p.symbol()):
                 adrs = s.getAddress(p.symbol())
             else:
-                print "Error : not found label"
+                s.addEntry(p.symbol(), nextVarAddress)
+                adrs = nextVarAddress
+                nextVarAddress += 1
             str = "0{:015b}".format(adrs)
         else:   # L_COMMAND
             pass
