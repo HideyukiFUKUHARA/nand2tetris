@@ -25,14 +25,6 @@ while len(files):
                 s.addEntry(p.symbol(), instAddress)
                 #print p.symbol(), instAddress
         elif p.commandType() == 'A_COMMAND':
-            #if re.match(r'[0-9].*', p.symbol()):
-            #    pass
-            #elif s.contains(p.symbol()):
-            #    pass
-            #else:
-            #    s.addEntry(p.symbol(), nextVarAddress)
-            #    #print p.symbol(), nextVarAddress
-            #    nextVarAddress += 1
             instAddress += 1
         else:
             instAddress += 1
@@ -54,7 +46,7 @@ while len(files):
                 nextVarAddress += 1
             str = "0{:015b}".format(adrs)
         else:   # L_COMMAND
-            pass
+            continue
         print str
         romfile.write(str + '\r\n')
     romfile.close

@@ -46,6 +46,7 @@ class parser():
 
     def dest(self):
         tmp = re.sub(r"=..*", "", self.command)
+        tmp = re.sub(r"..*;J.*", "", tmp)
         #print "dest : ", tmp
         return tmp
 
