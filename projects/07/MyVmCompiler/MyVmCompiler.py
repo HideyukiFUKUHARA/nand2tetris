@@ -16,9 +16,8 @@ while len(files):
     while p.hasMoreCommands():
         p.advance()
         cmdtype = p.commandType()
-        if   cmdtype == 'C_PUSH':
+        if   cmdtype in ('C_PUSH', 'C_POP'):
             c.writePushPop(cmdtype, p.arg1(), p.arg2())
         elif cmdtype == 'C_ARITHMETIC':
             c.writeArithmetic(p.arg1())
-        print "hoge"
 
