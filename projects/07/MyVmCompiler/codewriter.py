@@ -142,7 +142,7 @@ class codewriter():
         elif command == 'C_POP':
             if   segment in ('local', 'argument', 'this', 'that'):
                 list.append('    @{:d}'.format(int(index))) #   :
-                list.append('    D=A')      #   :   get offset
+                list.append('    D=M')      #   :   get offset
                 if   segment == 'local':    #   :   get base
                     list.append('    @LCL')
                 elif segment == 'argument':
