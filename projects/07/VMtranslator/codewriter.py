@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: UTF-8
 
-import re
+import re, sys
 
 class codewriter():
 
-    debug=1         # 0:off, 1:print debug message
-    lfcode="\r\n"   #line feed code dos="\r\n", unix="\n"
-    labelnum=0
+    debug = 1           # 0:off, 1:print debug message
+    lfcode = "\r\n"     #line feed code dos="\r\n", unix="\n"
+    labelnum = 0
 
     def __init__(self, filename):
         self.asmfile = open(filename, "w")
@@ -17,15 +17,14 @@ class codewriter():
         list.append('    D=A')
         list.append('    @SP')
         list.append('    M=D')
+        self.nextpc = 4
         # get vmname
-        if re.match(r'\.vm', filename):
-            self.vmname = re.sub(r'\.vm', '', filename)
-        else: # not has extension
-            self.vmname = filename
+        self.vmname = re.sub(r'\.asm', '', filename)
         # output
         for i in list:
             if self.debug: print i
             self.asmfile.write(i+self.lfcode)
+        if self.debug: print "nextpc : ", self.nextpc
 
     def setFileName(self, filename):
         self.__init__(filename)
@@ -47,6 +46,7 @@ class codewriter():
                 list.append('    M=M&D')    # 4 : x & y
             elif command == 'or':
                 list.append('    M=M|D')    # 4 : x | y
+            self.nextpc += 5
         # --------------------------------------------------------
         elif command in ('neg', 'not'):
             list.append('    @SP')          # 0 : RAM[SP]
@@ -55,6 +55,7 @@ class codewriter():
                 list.append('    M=-M')         # 2 : -y
             elif command == 'not':
                 list.append('    M=!M')         # 2 : !y
+            self.nextpc += 3
         # --------------------------------------------------------
         elif command in ('eq', 'gt', 'lt'):
             list.append('    @SP')          # 0 : RAM[SP]
@@ -79,13 +80,16 @@ class codewriter():
             list.append('    A=M-1')        # 14 : RAM[SP-1]
             list.append('    M=D')          # 15 :
             self.labelnum += 1
+            self.nextpc += 15
         # --------------------------------------------------------
         else:
             print "Error : undefined command in vmfile", command
+            sys.exit()
         # output
         for i in list:
             if self.debug: print i
             self.asmfile.write(i+self.lfcode)
+        if self.debug: print "nextpc : ", self.nextpc
 
     def writePushPop(self, command, segment, index):
         if self.debug: print "writePushPop : ", command, segment, index
@@ -110,10 +114,11 @@ class codewriter():
                 list.append('    M=D')      # 7 :   RAM[SP] = data
                 list.append('    @SP')      # 5 :   RAM[0]
                 list.append('    M=M+1')    # 8 :   SP+1
-            elif segment in ('pointer', 'tmp'):
+                self.nextpc += 9
+            elif segment in ('pointer', 'temp'):
                 if   segment == 'pointer':
                     list.append('    @{:d}'.format(3+int(index)))   # 0 :   THIS + index
-                elif segment == 'tmp':
+                elif segment == 'temp':
                     list.append('    @{:d}'.format(5+int(index)))   # 0 :   TMP + index
                 list.append('    D=M')      # 1 :   get data
                 list.append('    @SP')      # 2 :   RAM[0]
@@ -121,6 +126,7 @@ class codewriter():
                 list.append('    M=D')      # 4 :   RAM[SP] = data
                 list.append('    @SP')      # 5 :   RAM[0]
                 list.append('    M=M+1')    # 6 :   SP+1
+                self.nextpc += 7
             elif segment == 'constant':
                 list.append('    @{:d}'.format(int(index))) # 0 :
                 list.append('    D=A')      # 1 :   set data
@@ -129,24 +135,28 @@ class codewriter():
                 list.append('    M=D')      # 4 :   RAM[SP] = data
                 list.append('    @SP')      # 5 :   RAM[0]
                 list.append('    M=M+1')    # 6 :   SP+1
+                self.nextpc += 7
             elif segment == 'static':
-                list.append('    @{:s}.{:d}'.format(self.vmname, index)) #  0 :
+                list.append('    @{:s}.{:d}'.format(self.vmname, int(index))) #  0 :
                 list.append('    D=M')      # 1 :   get offset
                 list.append('    @SP')      # 2 :
                 list.append('    A=M')      # 3 :   RAM[SP]
                 list.append('    M=D')      # 4 :   RAM[SP] = data
-                list.append('    @SP')      # 2 :   RAM[0]
-                list.append('    M=M+1')    # 5 :   SP+1
-            else                   : print "Error : undefined segment"
+                list.append('    @SP')      # 5 :   RAM[0]
+                list.append('    M=M+1')    # 6 :   SP+1
+                self.nextpc += 7
+            else:
+                print "Error : undefined segment"
+                sys.exit()
         # --------------------------------------------------------
         elif command == 'C_POP':
             if   segment in ('local', 'argument', 'this', 'that'):
                 list.append('    @{:d}'.format(int(index))) #   :
-                list.append('    D=M')      #   :   get offset
+                list.append('    D=A')      #   :   get offset
                 if   segment == 'local':    #   :   get base
                     list.append('    @LCL')
                 elif segment == 'argument':
-                    list.append('    @THAT')
+                    list.append('    @ARG')
                 elif segment == 'this':
                     list.append('    @THIS')
                 elif segment == 'that':
@@ -160,34 +170,41 @@ class codewriter():
                 list.append('    @R15')     #   :   RAM[15]
                 list.append('    A=M')      #   :   RAM[base+offset]
                 list.append('    M=D')      #   :   RAM[base+offset] = RAM[SP-1]
-            elif segment in ('pointer','tmp'):
+                self.nextpc += 12
+            elif segment in ('pointer','temp'):
                 list.append('    @SP')      # 0 :   RAM[0]
                 list.append('    AM=M-1')   # 1 :   SP-1, RAM[SP-1]
                 list.append('    D=M')      # 2 :   get RAM[SP-1]
                 if   segment == 'pointer':
                     list.append('    @{:d}'.format(3+int(index))) # 3 :
-                elif segment == 'tmp':
+                elif segment == 'temp':
                     list.append('    @{:d}'.format(5+int(index))) # 3 :
                 list.append('    M=D')      # 4 :
+                self.nextpc += 5
             elif segment == 'constant':
                 list.append('    @SP')      # RAM[0]
                 list.append('    AM=M-1')   # SP-1
                 list.append('    D=M')      # get RAM[SP-1]
+                self.nextpc += 3
             elif segment == 'static':
                 list.append('    @SP')      # 0 :   RAM[0]
                 list.append('    AM=M-1')   # 1 :   SP-1, RAM[SP-1]
                 list.append('    D=M')      # 2 :   get RAM[SP-1]
-                list.append('    @{:s}.{:d}'.format(self.vmname, index)) #  0 :
-                list.append('    A=M')      # 1 :   get Xxx.j
+                list.append('    @{:s}.{:d}'.format(self.vmname, int(index))) #  3 :
                 list.append('    M=D')      # 4 :   RAM[Xxx.j] = data
-            else                   : print "Error : undefined segment"
+                self.nextpc += 5
+            else:
+                print "Error : undefined segment"
+                sys.exit()
         # --------------------------------------------------------
         else:
             print "Error : undefined command", command
+            sys.exit()
         # output
         for i in list:
             if self.debug: print i
             self.asmfile.write(i+self.lfcode)
+        if self.debug: print "nextpc : ", self.nextpc
 
     def close(self):
         self.asmfile.close()
