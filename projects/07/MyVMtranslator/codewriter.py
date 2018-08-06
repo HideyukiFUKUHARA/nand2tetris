@@ -10,24 +10,12 @@ class codewriter():
     labelnum = 0
 
     def __init__(self, filename):
-        self.asmfile = open(filename, "w")
-        # initialize SP=256
-        list = []
-        list.append('    @256')
-        list.append('    D=A')
-        list.append('    @SP')
-        list.append('    M=D')
-        self.nextpc = 4
-        # get vmname
-        self.vmname = re.sub(r'\.asm', '', filename)
-        # output
-        for i in list:
-            if self.debug: print i
-            self.asmfile.write(i+self.lfcode)
-        if self.debug: print "nextpc : ", self.nextpc
+        self.asmfile = open(filename, "a")
+        self.nextpc = 0     # for debug
 
     def setFileName(self, filename):
-        self.__init__(filename)
+        # get vmname
+        self.vmname = re.sub(r'\.vm', '', filename)
 
     def writeArithmetic(self, command):
         if self.debug: print "writeArithmetic : ", command
