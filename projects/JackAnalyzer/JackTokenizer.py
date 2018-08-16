@@ -5,7 +5,8 @@ import re,sys
 
 class JackTokenizer():
 
-    debug=1     # 0:off, 1:print debug message
+    debug=0     # 0:off, 1:print debug message
+    lfcode = "\r\n"     # line feed code dos="\r\n", unix="\n"
     allkeyword=('class' , 'constructor' , 'function' , 'method' , 'field' , 'static' , 'var' ,
                 'int' , 'char' , 'boolean' , 'void' , 'true' , 'false' , 'null' , 'this' ,
                 'let' , 'do' , 'if' , 'else' , 'while' , 'return')
@@ -149,11 +150,45 @@ class JackTokenizer():
         if self.debug: print "advance : ", self.token
 
     def tokenType(self):
-        if self.token[0] == 0 and self.token[1] in self.allkeyword:
-            tmp = self.token[1].upper()
+        if self.token[0] == 0:
+            tmp = 'KEYWORD'
+        elif self.token[0] == 1:
+            tmp = 'SYMBOL'
+        elif self.token[0] == 2:
+            tmp = 'INT_CONST'
+        elif self.token[0] == 3:
+            tmp = 'STRING_CONST'
+        elif self.token[0] == 4:
+            tmp = 'IDENTIFIER'
         else :
             print "Error : undefined token keyword"
         if self.debug: print "tokenType : ", tmp
+        return tmp
+
+    def keyWord(self):
+        #tmp = self.token[1].upper()
+        tmp = self.token[1]
+        if self.debug: print "keyWord : ", tmp
+        return tmp
+
+    def symbol(self):
+        tmp = self.token[1]
+        if self.debug: print "symbol : ", tmp
+        return tmp
+
+    def identifier(self):
+        tmp = self.token[1]
+        if self.debug: print "identifier : ", tmp
+        return tmp
+
+    def intVal(self):
+        tmp = self.token[1]
+        if self.debug: print "intVal : ", tmp
+        return tmp
+
+    def stringVal(self):
+        tmp = self.token[1]
+        if self.debug: print "stringVal : ", tmp
         return tmp
 
     def arg1(self):
@@ -184,18 +219,44 @@ class JackTokenizer():
         elif cmd == 'function' : tmp = self.command.split()[2]
         elif cmd == 'return'   : tmp = ""
         elif cmd == 'call'     : tmp = self.command.split()[2]
-        else                   : print "Error : undefined commnad"
+        else                   :
+            print "Error : undefined commnad"
+            sys.exit()
         if self.debug: print "arg2 : ", tmp
         return tmp
 
-    def test(self):
-        a = self.hasMoreTokens()
-        self.advance()
-        self.tokenType()
+    def write_all(self, filename):
+        tokenfile = open (filename, 'w')
+        tokenfile.write('<tokens>' + self.lfcode)
+        while self.hasMoreTokens():
+            self.advance()
+            self.write(tokenfile, 2)
+        tokenfile.write('</tokens>' + self.lfcode)
+        tokenfile.close()
+
+    def write(self, tokenfile, indent_num):
+        tmp = self.tokenType()
+        tokenfile.write(' ' * indent_num) 
+        if tmp == 'KEYWORD':
+            tokenfile.write('<keyword> ' + self.keyWord() + ' </keyword>' + self.lfcode)
+        elif tmp == 'SYMBOL':
+            tmp = self.symbol()
+            if   tmp == '&': tmp = '&amp;'
+            elif tmp == '>': tmp = '&gt;'
+            elif tmp == '<': tmp = '&lt;'
+            tokenfile.write('<symbol> ' + tmp + ' </symbol>' + self.lfcode)
+        elif tmp == 'IDENTIFIER':
+            tokenfile.write('<identifier> ' + self.identifier() + ' </identifier>' + self.lfcode)
+        elif tmp == 'INT_CONST':
+            tokenfile.write('<integerConstant> ' + self.intVal() + ' </integerConstant>' + self.lfcode)
+        elif tmp == 'STRING_CONST':
+            tokenfile.write('<stringConstant> ' + self.stringVal()[1:-1] + ' </stringConstant>' + self.lfcode)
 
 
 # test
-J = JackTokenizer("Main.jack")
-J.test()
+#J = JackTokenizer("Main.jack")
+#J = JackTokenizer("Square.jack")
+#J = JackTokenizer("SquareGame.jack")
+#J.test()
 
 

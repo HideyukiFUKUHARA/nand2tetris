@@ -8,11 +8,16 @@ import sys,re,os,glob
 debug=1     # 0:off, 1:print debug message
 init=1      # 0:off, 1:put init code
 files = []
+lfcode = "\r\n"     # line feed code dos="\r\n", unix="\n"
 
-filename = sys.argv[1]
 # specifying a file name
-if re.match(r'..*\.jack', filename):
-    files.append(filename)
+if len(sys.argv) > 1:
+    for filename in sys.argv[1:]:
+        if re.match(r'..*\.jack', filename):
+            files.append(filename)
+        else:
+            print "Error : not found a jack file", cmdtype
+            sys.exit()
 # specifying a dir name
 else:
     files = glob.glob('*.jack')
@@ -25,41 +30,21 @@ for filename in files:
         if debug: print "rm : ", tmp
     else:
         if debug: print "not exist : ", tmp
-
-
-
-# open dest file
-c = codewriter(tmp)
-if init: c.writeInit()
+    tmp = re.sub(r'\.jack', 'T.xml', filename)
+    if os.path.exists(tmp):
+        os.remove(tmp)
+        if debug: print "rm : ", tmp
+    else:
+        if debug: print "not exist : ", tmp
 
 
 while len(files):
     filename = files.pop(0)
     if debug: print "load source filename : ", filename
-    c.setFileName(filename)
-    p = parser(filename)
-    while p.hasMoreCommands():
-        p.advance()
-        cmdtype = p.commandType()
-        if   cmdtype in ('C_PUSH', 'C_POP'):
-            c.writePushPop(cmdtype, p.arg1(), p.arg2())
-        elif cmdtype == 'C_ARITHMETIC':
-            c.writeArithmetic(p.arg1())
-        elif cmdtype == 'C_LABEL':
-            c.writeLabel(p.arg1())
-        elif cmdtype == 'C_GOTO':
-            c.writeGoto(p.arg1())
-        elif cmdtype == 'C_IF':
-            c.writeIf(p.arg1())
-        elif cmdtype == 'C_FUNCTION':
-            c.writeFunction(p.arg1(), p.arg2())
-        elif cmdtype == 'C_RETURN':
-            c.writeReturn()
-        elif cmdtype == 'C_CALL':
-            c.writeCall(p.arg1(), p.arg2())
-        else:
-            print "Error : undefined cmdtype", cmdtype
-            sys.exit()
+    J = JackTokenizer(filename)
+    J.write_all(re.sub(r'\.jack', 'T.xml', filename))
 
-c.close
+    J = JackTokenizer(filename)
+    C = CompilationEngine(re.sub(r'\.jack', '.xml', filename), J)
+    C.compileClass()
 
