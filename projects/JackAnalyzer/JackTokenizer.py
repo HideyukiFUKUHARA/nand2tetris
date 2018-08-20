@@ -252,6 +252,45 @@ class JackTokenizer():
         elif tmp == 'STRING_CONST':
             tokenfile.write('<stringConstant> ' + self.stringVal()[1:-1] + ' </stringConstant>' + self.lfcode)
 
+    def is_keyword(self):
+        if self.token[0] == 0: return 1
+        else : return 0
+
+    def is_symbol(self):
+        if self.token[0] == 1: return 1
+        else : return 0
+
+    def is_integer(self):
+        if self.token[0] == 2: return 1
+        else : return 0
+
+    def is_string(self):
+        if self.token[0] == 3: return 1
+        else : return 0
+
+    def is_identifier(self):
+        if self.token[0] == 4: return 1
+        else : return 0
+
+    def match_type(self):
+        if self.token[1] in ('int', 'char', 'boolean', 'Array'): return 1
+        elif self.is_identifier(): return 1
+        else: return 0
+
+    def token_is(self, list):
+        if self.token[1] in list: return 1
+        else: return 0
+
+    def peek_next(self):
+        if len(self.alltoken) > 0:
+            return self.alltoken[0]
+        else:
+            print 'Error : cannot peek'
+            sys.exit()
+
+    def push(self, list):
+        self.alltoken.insert(0, list)
+
 
 # test
 #J = JackTokenizer("Main.jack")
